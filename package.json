@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "web application enabling users to upload videos.",
   "main": "dist/server.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node ./dist/server.js",
-    "build": "tsc",
-    "dev": "nodemon --exec ts-node ./src/server.ts"
+    "start": "node --loader ts-node/esm src/server.ts",
+    "dev": "nodemon --loader ts-node/esm src/server.ts",
+    "build": "tsc"
   },
   "keywords": [
     "Express.js",
