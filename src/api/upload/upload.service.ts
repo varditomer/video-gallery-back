@@ -1,3 +1,4 @@
+// upload.service.ts
 /* Handle POST requests for video uploads, process videos to
 generate thumbnails, and return URLs of stored files. */
 
