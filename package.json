@@ -5,10 +5,10 @@
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon --loader ts-node/esm server.ts",
+    "start": "node dist/local-server.js",
+    "dev": "nodemon",
     "build": "tsc",
-    "vercel-build": "echo \"No build needed for API routes\" && mkdir -p public"
+    "vercel-build": "tsc"
   },
   "keywords": [
     "Express.js",

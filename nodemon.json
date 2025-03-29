@@ -1,11 +1,13 @@
 {
     "watch": [
-        "server.ts",
-        "api"
+        "local-server.ts",
+        "api/**/*.ts",
+        "lib/**/*.ts"
     ],
     "ext": "ts,json",
     "ignore": [
-        "**/*.spec.ts"
+        "**/*.spec.ts",
+        "node_modules"
     ],
-    "exec": "node --loader ts-node/esm server.ts"
+    "exec": "node --loader ts-node/esm local-server.ts"
 }

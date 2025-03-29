@@ -1,0 +1,30 @@
+/
+├── api/                           # Serverless API endpoints (Vercel routes)
+│   ├── alive.ts                   # GET /api/alive - Health check endpoint
+│   ├── upload/                    # Upload endpoints
+│   │   ├── index.ts               # POST /api/upload - Handle video uploads
+│   │   ├── process.ts             # POST /api/upload/process - Process videos
+│   │   ├── upload.controller.ts   # Upload controller logic
+│   │   └── upload.service.ts      # Upload business logic
+│   └── gallery/                   # Gallery endpoints
+│       ├── index.ts               # GET /api/gallery - List all videos
+│       ├── [id].ts                # GET /api/gallery/:id - Get specific video
+│       ├── gallery.controller.ts  # Gallery controller logic
+│       └── gallery.service.ts     # Gallery business logic
+├── lib/                           # Shared libraries and utilities
+│   ├── database/                  # Database connection and models
+│   │   ├── connect.ts             # MongoDB connection
+│   │   └── models/
+│   │       └── video.model.ts     # Video data model
+│   ├── middleware/                # Shared middleware
+│   │   └── error-handler.ts       # Error handling middleware
+│   └── utils/                     # Utility functions
+│       ├── ffmpeg.ts              # Video processing utilities
+│       └── logger.ts              # Logging utility
+├── public/                        # Static files (built frontend)
+├── local-server.ts                # Local development server
+├── tsconfig.json                  # TypeScript configuration
+├── vercel.json                    # Vercel configuration
+├── package.json                   # Dependencies and scripts
+├── .env                           # Environment variables (local)
+└── .env.example                   # Example environment variables

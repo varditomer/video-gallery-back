@@ -1,4 +1,4 @@
-// api/upload/handle-upload.ts
+// api/upload/index.ts
 import { Request, Response } from "express";
 import { uploadController } from './upload.controller.js';
 
