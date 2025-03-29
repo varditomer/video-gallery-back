@@ -22,6 +22,7 @@ const handleBlobUpload = async (req: Request, res: Response) => {
     const jsonResponse = await handleUpload({
       body,
       request: req,
+      token: token || 'vercel_blob_rw_Don0j4yn15QigBE3_y7yDfYCxRn1T1wHpK3efUUxd3PFlcw',
       onBeforeGenerateToken: async (pathname) => {
         // Generate a client token for the browser to upload the file
         console.log(`Generating token for ${pathname}`);
