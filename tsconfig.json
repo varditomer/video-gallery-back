@@ -113,6 +113,6 @@
   "ts-node": {
     "esm": true
   },
-  "include": ["src/**/*"],
+  "include": ["server.ts", "api/**/*", "gallery", "upload"],
   "exclude": ["node_modules"]
 }
