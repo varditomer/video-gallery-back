@@ -2,7 +2,6 @@
   "name": "video-gallery-back",
   "version": "1.0.0",
   "description": "web application enabling users to upload videos.",
-  "main": "dist/server.js",
   "type": "module",
   "scripts": {
     "start": "node dist/local-server.js",
