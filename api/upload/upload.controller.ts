@@ -6,6 +6,18 @@ import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 const handleBlobUpload = async (req: Request, res: Response) => {
   try {
     const body = req.body as HandleUploadBody;
+
+     // Get token from environment or fallback
+     const token = process.env.BLOB_READ_WRITE_TOKEN;
+    
+     console.log("Token available:", !!token);
+     
+     if (!token) {
+       console.error("BLOB_READ_WRITE_TOKEN not found in environment variables");
+       return res.status(500).json({
+         error: "Blob token not configured on server"
+       });
+     }
     
     const jsonResponse = await handleUpload({
       body,
