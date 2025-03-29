@@ -12,6 +12,14 @@
     ],
     "routes": [
         {
+            "src": "/api/upload",
+            "dest": "/api/upload/index.ts"
+        },
+        {
+            "src": "/api/alive",
+            "dest": "/api/alive.ts"
+        },
+        {
             "src": "/api/(.*)",
             "dest": "/api/$1.ts"
         },
