@@ -11,6 +11,11 @@ const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config();
 
+console.log("Environment check:", {
+  hasToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+  tokenPrefix: process.env.BLOB_READ_WRITE_TOKEN?.substring(0, 5) + "..." // Log just the prefix for security
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
