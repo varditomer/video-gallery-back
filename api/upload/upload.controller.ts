@@ -1,24 +1,14 @@
-// upload.controller.ts
-import { Request, Response } from "express";
+// api/upload/upload.controller.ts
+import { Request, Response } from 'express';
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
+// import { uploadService } from './upload.service.js';
 
 // Handle Vercel Blob client upload token generation and completion
 const handleBlobUpload = async (req: Request, res: Response) => {
   try {
     const body = req.body as HandleUploadBody;
 
-     // Get token from environment or fallback
-     const token = process.env.BLOB_READ_WRITE_TOKEN;
-    
-     console.log("Token available:", !!token);
-     
-     if (!token) {
-       console.error("BLOB_READ_WRITE_TOKEN not found in environment variables");
-       return res.status(500).json({
-         error: "Blob token not configured on server"
-       });
-     }
-    
+    // Process the upload using Vercel Blob
     const jsonResponse = await handleUpload({
       body,
       request: req,
@@ -39,22 +29,15 @@ const handleBlobUpload = async (req: Request, res: Response) => {
           console.log('Video upload completed:', blob);
           console.log('Token payload:', tokenPayload);
           
-          // In a real application, you would store metadata in a database here
-          // For example: 
-          // await db.videos.create({
-          //   url: blob.url,
-          //   fileName: blob.pathname,
-          //   contentType: blob.contentType,
-          //   uploadedAt: new Date()
-          // });
-          
+          // Process the uploaded video
+          // await uploadService.processVideo(blob, tokenPayload);
         } catch (error) {
           console.error('Error in onUploadCompleted:', error);
         }
       },
     });
 
-    return res.json(jsonResponse);
+    return res.status(200).json(jsonResponse);
   } catch (error: any) {
     console.error("Error handling Blob upload:", error);
     return res.status(400).json({

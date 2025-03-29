@@ -36,10 +36,8 @@ app.use(express.json()); // Parse JSON requests
 
 // Routes
 import { galleryRouter } from "./api/gallery/gallery.routes.js";
-import { uploadRouter } from "./api/upload/upload.routes.js";
 
 app.use("/api/gallery", galleryRouter);
-app.use("/api/upload", uploadRouter);
 
 // Health Check Route
 app.get("/api/alive", (req: Request, res: Response) => {
