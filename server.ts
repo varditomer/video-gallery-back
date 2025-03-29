@@ -62,16 +62,16 @@ app.get("/api/test", (req: Request, res: Response) => {
     hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
   });
 });
-
 // Make every server-side-route to match the index.html
 // so when requesting http://localhost:3000/index.html/video/123 it will still respond with
 // our SPA (single page app) (the index.html file) and allow react-router to take it from there
 app.get("/**", (req, res) => {
   res.sendFile(path.join(__dirname, "../public", "index.html"));
 });
-
+;;;d
 // Start the server
 const PORT = process.env.PORT || 3000;
+console.log(`PORT:`, PORT)
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
 });
