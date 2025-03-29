@@ -8,8 +8,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // Load environment variables
 dotenv.config();
+console.log("Environment check:", {
+    hasToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+    tokenPrefix: process.env.BLOB_READ_WRITE_TOKEN?.substring(0, 5) + "..." // Log just the prefix for security
+});
 const app = express();
-const PORT = process.env.PORT || 3000;
 // Middleware
 // CORS Configuration
 if (process.env.NODE_ENV === "production") {
@@ -32,6 +35,21 @@ app.use("/api/upload", uploadRouter);
 app.get("/api/alive", (req, res) => {
     res.status(200).json({ status: "OK", message: "Server is Alive!" });
 });
+// Add this to your server.ts
+app.get("/api/test", (req, res) => {
+    console.log("TEST ENDPOINT CALLED - Environment check:", {
+        nodeEnv: process.env.NODE_ENV,
+        hasToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+        tokenPrefix: process.env.BLOB_READ_WRITE_TOKEN ?
+            (process.env.BLOB_READ_WRITE_TOKEN.substring(0, 5) + "...") :
+            "not found"
+    });
+    res.status(200).json({
+        message: "Test endpoint working",
+        env: process.env.NODE_ENV,
+        hasToken: !!process.env.BLOB_READ_WRITE_TOKEN
+    });
+});
 // Make every server-side-route to match the index.html
 // so when requesting http://localhost:3000/index.html/video/123 it will still respond with
 // our SPA (single page app) (the index.html file) and allow react-router to take it from there
@@ -39,6 +57,8 @@ app.get("/**", (req, res) => {
     res.sendFile(path.join(__dirname, "../public", "index.html"));
 });
 // Start the server
+const PORT = process.env.PORT || 3000;
+console.error(`PORT:`, PORT);
 app.listen(PORT, () => {
-    console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    console.log(`🚀 Server is running on port ${PORT}`);
 });

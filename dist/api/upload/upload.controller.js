@@ -1,24 +1,49 @@
-import { uploadService } from "./upload.service.js";
-const upload = async (req, res) => {
+import { handleUpload } from '@vercel/blob/client';
+// Handle Vercel Blob client upload token generation and completion
+const handleBlobUpload = async (req, res) => {
     try {
-        console.log('uploading .........');
-        // TODO: Implement file upload logic
-        const videoData = req.body;
-        const result = await uploadService.upload(videoData);
-        res.status(200).json({
-            success: true,
-            message: "Upload endpoint placeholder",
-            data: result,
+        const body = req.body;
+        const jsonResponse = await handleUpload({
+            body,
+            request: req,
+            onBeforeGenerateToken: async (pathname) => {
+                // Generate a client token for the browser to upload the file
+                console.log(`Generating token for ${pathname}`);
+                return {
+                    allowedContentTypes: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'],
+                    tokenPayload: JSON.stringify({
+                        fileName: pathname,
+                        timestamp: Date.now()
+                    }),
+                };
+            },
+            onUploadCompleted: async ({ blob, tokenPayload }) => {
+                try {
+                    console.log('Video upload completed:', blob);
+                    console.log('Token payload:', tokenPayload);
+                    // In a real application, you would store metadata in a database here
+                    // For example: 
+                    // await db.videos.create({
+                    //   url: blob.url,
+                    //   fileName: blob.pathname,
+                    //   contentType: blob.contentType,
+                    //   uploadedAt: new Date()
+                    // });
+                }
+                catch (error) {
+                    console.error('Error in onUploadCompleted:', error);
+                }
+            },
         });
+        return res.json(jsonResponse);
     }
     catch (error) {
-        console.error("Error in upload controller:", error);
-        res.status(500).json({
-            success: false,
-            message: "Internal server error",
+        console.error("Error handling Blob upload:", error);
+        return res.status(400).json({
+            error: error.message
         });
     }
 };
 export const uploadController = {
-    upload,
+    handleBlobUpload,
 };
