@@ -7,8 +7,6 @@ const handleBlobUpload = async (req: Request, res: Response) => {
   try {
     const body = req.body as HandleUploadBody;
     
-    // console.log("Received upload request", { pathname: body.pathname });
-
     const jsonResponse = await handleUpload({
       body,
       request: req,
