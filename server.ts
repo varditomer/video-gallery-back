@@ -68,7 +68,7 @@ app.get("/api/test", (req: Request, res: Response) => {
 app.get("/**", (req, res) => {
   res.sendFile(path.join(__dirname, "../public", "index.html"));
 });
-;;d
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 console.log(`PORT:`, PORT)
