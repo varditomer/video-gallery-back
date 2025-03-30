@@ -1,37 +1,21 @@
-// upload.service.ts
-import { put } from "@vercel/blob";
-import path from "path";
-import fs from "fs";
-import { fileURLToPath } from "url";
+// api/upload/upload.service.ts
+import { put, PutBlobResult } from "@vercel/blob";
 import * as https from "https";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 import ffmpeg from "fluent-ffmpeg";
-import os from "os";
+import ffmpegStatic from "ffmpeg-static";
+import { dbService } from "../../lib/services/db.service.js";
 
-// Get __dirname equivalent in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Set ffmpeg path
+// @ts-ignore
+ffmpeg.setFfmpegPath(ffmpegStatic);
 
-// Temp directory for processing
+// Create temp directory for video processing
 const tempDir = path.join(os.tmpdir(), "video-processing");
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
-}
-
-// Interface for uploaded video info from frontend
-interface UploadedVideoInfo {
-  url: string;
-  fileName: string;
-  contentType: string;
-}
-
-// Interface for processed video metadata
-interface ProcessedVideo {
-  videoUrl: string;
-  fileName: string;
-  thumbnailUrl: string;
-  thumbnailName: string;
-  contentType: string;
-  uploadDate: Date;
 }
 
 /**
@@ -56,15 +40,12 @@ const downloadFile = async (url: string, localPath: string): Promise<void> => {
 };
 
 /**
- * Generate a thumbnail from a video
+ * Generate a thumbnail from a video file
  */
-const generateThumbnail = async (
-  videoPath: string,
-  outputPath: string
-): Promise<string> => {
+const generateThumbnail = async (videoPath: string, outputPath: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     ffmpeg(videoPath)
-      .on("end", () => resolve(outputPath))
+      .on("end", () => resolve())
       .on("error", (err) => reject(err))
       .screenshots({
         count: 1,
@@ -77,62 +58,72 @@ const generateThumbnail = async (
 };
 
 /**
- * Process the videos that have been uploaded to Vercel Blob Storage
+ * Process a video that has been uploaded to Vercel Blob
+ * - Download the video temporarily
+ * - Generate a thumbnail
+ * - Upload the thumbnail to Vercel Blob
+ * - Store metadata in the database
  */
-const processVideos = async (
-  videos: UploadedVideoInfo[]
-): Promise<ProcessedVideo[]> => {
-  const processedVideos: ProcessedVideo[] = [];
+const processVideo = async (blob: PutBlobResult) => {
+  try {
+    console.log("Processing video:", blob.url);
 
-  for (const video of videos) {
-    try {
-      // Create temp paths for processing
-      const tempVideoPath = path.join(tempDir, video.fileName);
-      const thumbnailFileName = `${path.basename(
-        video.fileName,
-        path.extname(video.fileName)
-      )}-thumb.jpg`;
-      const tempThumbnailPath = path.join(tempDir, thumbnailFileName);
+    // Create temporary file paths
+    const uniqueId = Date.now().toString();
+    const videoExt = path.extname(blob.pathname);
+    const videoBasename = path.basename(blob.pathname, videoExt);
+    const tempVideoPath = path.join(tempDir, `${videoBasename}-${uniqueId}${videoExt}`);
+    const thumbnailPath = path.join(tempDir, `${videoBasename}-${uniqueId}-thumb.jpg`);
 
-      // Download video from Vercel Blob
-      await downloadFile(video.url, tempVideoPath);
+    // Download the video from Vercel Blob
+    console.log("Downloading video to:", tempVideoPath);
+    await downloadFile(blob.url, tempVideoPath);
 
-      // Generate thumbnail
-      await generateThumbnail(tempVideoPath, tempThumbnailPath);
+    // Generate thumbnail
+    console.log("Generating thumbnail at:", thumbnailPath);
+    await generateThumbnail(tempVideoPath, thumbnailPath);
 
-      // Upload thumbnail to Vercel Blob
-      const { url: thumbnailUrl } = await put(
-        thumbnailFileName,
-        fs.readFileSync(tempThumbnailPath),
-        {
-          access: "public",
-          contentType: "image/jpeg",
-        }
-      );
+    // Upload thumbnail to Vercel Blob
+    console.log("Uploading thumbnail to Vercel Blob");
+    const thumbnailFilename = `${videoBasename}-thumb.jpg`;
+    const { url: thumbnailUrl } = await put(thumbnailFilename, fs.readFileSync(thumbnailPath), {
+      access: "public",
+      contentType: "image/jpeg",
+    });
 
-      // Clean up temp files
-      fs.unlinkSync(tempVideoPath);
-      fs.unlinkSync(tempThumbnailPath);
+    // Get file size from temporary file
+    const stats = fs.statSync(tempVideoPath);
+    const fileSizeInBytes = stats.size;
 
-      // Add to processed videos
-      processedVideos.push({
-        videoUrl: video.url,
-        fileName: video.fileName,
-        thumbnailUrl,
-        thumbnailName: thumbnailFileName,
-        contentType: video.contentType,
-        uploadDate: new Date(),
-      });
-    } catch (error) {
-      console.error(`Error processing video ${video.fileName}:`, error);
-      // Continue processing other videos
-    }
+    // Extract video metadata
+    const videoMetadata = {
+      title: videoBasename,
+      videoUrl: blob.url,
+      thumbnailUrl,
+      contentType: blob.contentType || "video/mp4",
+      size: fileSizeInBytes,
+      uploadDate: new Date(),
+    };
+
+    // Store video metadata in the database using our database service
+    console.log("Storing video metadata in database");
+    const videosCollection = await dbService.getCollection("videos");
+    const result = await videosCollection.insertOne(videoMetadata);
+
+    // Clean up temporary files
+    fs.unlinkSync(tempVideoPath);
+    fs.unlinkSync(thumbnailPath);
+
+    return {
+      id: result.insertedId,
+      ...videoMetadata,
+    };
+  } catch (error) {
+    console.error("Error processing video:", error);
+    throw error;
   }
-
-  return processedVideos;
 };
 
-// Export all functions as a single object
 export const uploadService = {
-  processVideos,
+  processVideo,
 };

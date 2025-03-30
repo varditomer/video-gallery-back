@@ -14,7 +14,7 @@ dotenv.config();
 // Import API handlers (routes)
 import aliveHandler from "./api/alive.js";
 import uploadHandler from "./api/upload/index.js";
-// import processHandler from "./api/upload/process.js";
+import processHandler from "./api/upload/process.js";
 // import galleryHandler from "./api/gallery/index.js";
 // import galleryByIdHandler from "./api/gallery/[id].js";
 
@@ -43,7 +43,11 @@ app.get("/api/alive", async (req, res) => {
 app.post("/api/upload", async (req, res) => {
   await uploadHandler(req, res);
 });
-// app.post("/api/upload/process", (req, res) => processHandler(req, res));
+
+app.post("/api/upload/process", async (req, res) => {
+  await processHandler(req, res);
+});
+
 // app.get("/api/gallery", (req, res) => galleryHandler(req, res));
 // app.get("/api/gallery/:id", (req, res) => {
 //   // Map route parameter to query parameter expected by [id].js
