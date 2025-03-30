@@ -30,12 +30,7 @@ const handleBlobUpload = async (req: Request, res: Response) => {
         console.log(`Generating token for ${pathname}`);
 
         return {
-          allowedContentTypes: [
-            "video/mp4",
-            "video/webm",
-            "video/quicktime",
-            "video/x-msvideo",
-          ],
+          allowedContentTypes: ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"],
           tokenPayload: JSON.stringify({
             fileName: pathname,
             timestamp: Date.now(),
@@ -46,11 +41,12 @@ const handleBlobUpload = async (req: Request, res: Response) => {
         try {
           console.log("Video upload completed:", blob);
 
+          // This callback will run in production but not in development
           // Process the video (generate thumbnail and store metadata)
           const processedVideo = await uploadService.processVideo(blob);
           console.log("Video processed successfully:", processedVideo);
         } catch (error) {
-          console.error("Error processing video:", error);
+          console.error("Error in onUploadCompleted callback:", error);
         }
       },
     });
@@ -64,20 +60,25 @@ const handleBlobUpload = async (req: Request, res: Response) => {
   }
 };
 
-// In your upload controller
+// Process uploaded video (used in development only)
 const processUploadedVideo = async (req: Request, res: Response) => {
   try {
-    console.log("Request body:", req.body);
+    console.log("Request body for manual processing:", req.body);
     const { blobUrl, fileName } = req.body;
-    
-    console.log("blobUrl:", blobUrl);
-    console.log("fileName:", fileName);
 
-    // Create a complete blob-like object that matches PutBlobResult
+    if (!blobUrl || !fileName) {
+      return res.status(400).json({
+        error: "Missing required parameters: blobUrl and fileName",
+      });
+    }
+
+    console.log("Processing video manually:", { blobUrl, fileName });
+
+    // Create a blob-like object that matches PutBlobResult
     const blobInfo = {
       url: blobUrl,
       pathname: fileName,
-      contentType: "video/mp4",
+      contentType: getContentTypeFromFilename(fileName) || "video/mp4",
       downloadUrl: blobUrl, // Same as url for simplicity
       contentDisposition: "inline", // Default value
     };
@@ -90,12 +91,26 @@ const processUploadedVideo = async (req: Request, res: Response) => {
       data: processedVideo,
     });
   } catch (error: any) {
-    console.error("Error processing video:", error);
+    console.error("Error processing video manually:", error);
     res.status(500).json({
       error: error.message,
     });
   }
 };
+
+// Helper function to determine content type from filename
+function getContentTypeFromFilename(fileName: string): string | null {
+  const extension = fileName.split(".").pop()?.toLowerCase();
+
+  const contentTypeMap: Record<string, string> = {
+    mp4: "video/mp4",
+    webm: "video/webm",
+    mov: "video/quicktime",
+    avi: "video/x-msvideo",
+  };
+
+  return extension ? contentTypeMap[extension] || null : null;
+}
 
 export const uploadController = {
   handleBlobUpload,
