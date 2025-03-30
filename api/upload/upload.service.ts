@@ -231,4 +231,5 @@ const processVideo = async (blob: PutBlobResult) => {
 
 export const uploadService = {
   processVideo,
+  dbService, // Export dbService for use in the controller
 };

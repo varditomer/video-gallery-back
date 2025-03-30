@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { uploadService } from "./upload.service.js";
 
-// Handle Vercel Blob client upload token generation and completion
+// Handle Vercel Blob client upload token generation and completion for videos
 const handleBlobUpload = async (req: Request, res: Response) => {
   try {
     const body = req.body as HandleUploadBody;
@@ -40,11 +40,7 @@ const handleBlobUpload = async (req: Request, res: Response) => {
       onUploadCompleted: async ({ blob, tokenPayload }) => {
         try {
           console.log("Video upload completed:", blob);
-
-          // This callback will run in production but not in development
-          // Process the video (generate thumbnail and store metadata)
-          const processedVideo = await uploadService.processVideo(blob);
-          console.log("Video processed successfully:", processedVideo);
+          // We don't process here anymore since we'll wait for the client to link video and thumbnail
         } catch (error) {
           console.error("Error in onUploadCompleted callback:", error);
         }
@@ -54,6 +50,45 @@ const handleBlobUpload = async (req: Request, res: Response) => {
     return res.status(200).json(jsonResponse);
   } catch (error: any) {
     console.error("Error handling Blob upload:", error);
+    return res.status(400).json({
+      error: error.message,
+    });
+  }
+};
+
+// Handle thumbnail upload
+const handleThumbnailUpload = async (req: Request, res: Response) => {
+  try {
+    const body = req.body as HandleUploadBody;
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+
+    if (!token) {
+      return res.status(500).json({
+        error: "Blob token not configured on server",
+      });
+    }
+
+    const jsonResponse = await handleUpload({
+      body,
+      request: req,
+      token,
+      onBeforeGenerateToken: async (pathname) => {
+        return {
+          allowedContentTypes: ["image/jpeg", "image/png"],
+          tokenPayload: JSON.stringify({
+            fileName: pathname,
+            timestamp: Date.now(),
+          }),
+        };
+      },
+      onUploadCompleted: async ({ blob }) => {
+        console.log("Thumbnail upload completed:", blob);
+      },
+    });
+
+    return res.status(200).json(jsonResponse);
+  } catch (error: any) {
+    console.error("Error handling thumbnail upload:", error);
     return res.status(400).json({
       error: error.message,
     });
@@ -98,6 +133,67 @@ const processUploadedVideo = async (req: Request, res: Response) => {
   }
 };
 
+// Process video with thumbnail URL provided
+const processVideoWithThumbnail = async (req: Request, res: Response) => {
+  try {
+    const { videoUrl, thumbnailUrl, fileName } = req.body;
+
+    if (!videoUrl || !thumbnailUrl) {
+      return res.status(400).json({
+        error: "Missing required parameters: videoUrl and thumbnailUrl",
+      });
+    }
+
+    console.log("Processing video with thumbnail:", { videoUrl, thumbnailUrl });
+
+    // Get file size using HTTP HEAD request
+    let fileSizeInBytes = 0;
+    try {
+      fileSizeInBytes = await new Promise((resolve, reject) => {
+        require("https")
+          .request(videoUrl, { method: "HEAD" }, (response: any) => {
+            const contentLength = response.headers["content-length"];
+            resolve(contentLength ? parseInt(contentLength, 10) : 0);
+          })
+          .on("error", reject)
+          .end();
+      });
+    } catch (error) {
+      console.error("Error getting file size:", error);
+    }
+
+    // Extract file basename from URL or use provided fileName
+    const videoBasename = fileName || videoUrl.split("/").pop().split("?")[0];
+
+    // Create video metadata
+    const videoMetadata = {
+      title: videoBasename.replace(/\.[^/.]+$/, ""), // Remove extension
+      videoUrl,
+      thumbnailUrl,
+      contentType: getContentTypeFromFilename(videoBasename) || "video/mp4",
+      size: fileSizeInBytes,
+      uploadDate: new Date(),
+    };
+
+    // Store in database
+    const videosCollection = await uploadService.dbService.getCollection("videos");
+    const result = await videosCollection.insertOne(videoMetadata);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: result.insertedId,
+        ...videoMetadata,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error processing video with thumbnail:", error);
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+};
+
 // Helper function to determine content type from filename
 function getContentTypeFromFilename(fileName: string): string | null {
   const extension = fileName.split(".").pop()?.toLowerCase();
@@ -114,5 +210,7 @@ function getContentTypeFromFilename(fileName: string): string | null {
 
 export const uploadController = {
   handleBlobUpload,
+  handleThumbnailUpload,
   processUploadedVideo,
+  processVideoWithThumbnail,
 };
