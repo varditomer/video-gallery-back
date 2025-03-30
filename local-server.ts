@@ -53,7 +53,7 @@ app.get("/api/gallery", async (req, res) => {
 });
 
 app.get("/api/gallery/:id", async (req, res) => {
-  // Map route parameter to query parameter expected by [id].js
+  // Map route parameter to query parameter expected by gallery-by-id.js
   req.query.id = req.params.id;
   await galleryByIdHandler(req, res);
 });
