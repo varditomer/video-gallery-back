@@ -15,8 +15,8 @@ dotenv.config();
 import aliveHandler from "./api/alive.js";
 import uploadHandler from "./api/upload/index.js";
 import processHandler from "./api/upload/process.js";
-// import galleryHandler from "./api/gallery/index.js";
-// import galleryByIdHandler from "./api/gallery/[id].js";
+import galleryHandler from "./api/gallery/index.js";
+import galleryByIdHandler from "./api/gallery/gallery-by-id.js";
 
 // Setup Express
 const app = express();
@@ -48,12 +48,15 @@ app.post("/api/upload/process", async (req, res) => {
   await processHandler(req, res);
 });
 
-// app.get("/api/gallery", (req, res) => galleryHandler(req, res));
-// app.get("/api/gallery/:id", (req, res) => {
-//   // Map route parameter to query parameter expected by [id].js
-//   req.query.id = req.params.id;
-//   return galleryByIdHandler(req, res);
-// });
+app.get("/api/gallery", async (req, res) => {
+  await galleryHandler(req, res);
+});
+
+app.get("/api/gallery/:id", async (req, res) => {
+  // Map route parameter to query parameter expected by [id].js
+  req.query.id = req.params.id;
+  await galleryByIdHandler(req, res);
+});
 
 // Make every server-side-route to match the index.html
 // so when requesting http://localhost:3000/index.html/video/123 it will still respond with
