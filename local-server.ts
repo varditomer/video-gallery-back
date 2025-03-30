@@ -48,7 +48,7 @@ app.post("/api/upload/process", async (req, res) => {
   await processHandler(req, res);
 });
 
-app.get("/api/gallery", async (req, res) => {
+app.get("/api/gallery/index", async (req, res) => {
   await galleryHandler(req, res);
 });
 

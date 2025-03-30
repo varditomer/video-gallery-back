@@ -1,8 +1,8 @@
-import { MongoClient, Collection, Db, ServerApiVersion } from 'mongodb';
+import { MongoClient, Collection, Db, ServerApiVersion } from "mongodb";
 
 // Get MongoDB connection details from environment variables
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/video-gallery';
-const DB_NAME = process.env.DB_NAME || 'video-gallery';
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/video-gallery";
+const DB_NAME = process.env.DB_NAME || "video-gallery";
 
 // MongoDB connection options
 const options = {
@@ -10,36 +10,49 @@ const options = {
     version: ServerApiVersion.v1,
     strict: true,
     deprecationErrors: true,
-  }
+  },
+  // Add reasonable timeouts for serverless environments
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 45000,
 };
 
-// Singleton pattern for MongoDB connection
-let client: MongoClient | null = null;
-let dbInstance: Db | null = null;
+// For global scope access needed in serverless environments
+declare global {
+  var _mongoClient: { client: MongoClient | null; db: Db | null; promise: Promise<MongoClient> | null };
+}
+
+// Initialize the global connection cache if it doesn't exist
+if (!global._mongoClient) {
+  global._mongoClient = { client: null, db: null, promise: null };
+}
 
 /**
- * Connect to MongoDB if not already connected
+ * Connect to MongoDB with optimizations for serverless environments
  */
 async function connect(): Promise<Db> {
-  // Return existing connection if available
-  if (dbInstance) return dbInstance;
-  
+  // Return existing DB instance if available
+  if (global._mongoClient.db) {
+    return global._mongoClient.db;
+  }
+
   try {
-    // Create new client if needed
-    if (!client) {
-      console.log('Creating new MongoDB client connection to:', MONGODB_URI);
-      client = new MongoClient(MONGODB_URI, options);
+    // Use existing connection promise if available
+    if (!global._mongoClient.promise) {
+      console.log("Creating new MongoDB client connection");
+      global._mongoClient.promise = MongoClient.connect(MONGODB_URI, options);
     }
-    
-    // Connect to MongoDB
-    await client.connect();
-    console.log('Connected to MongoDB');
-    
+
+    // Wait for connection
+    global._mongoClient.client = await global._mongoClient.promise;
+    console.log("Connected to MongoDB");
+
     // Get database instance
-    dbInstance = client.db(DB_NAME);
-    return dbInstance;
+    global._mongoClient.db = global._mongoClient.client.db(DB_NAME);
+    return global._mongoClient.db;
   } catch (error) {
-    console.error('Failed to connect to MongoDB:', error);
+    console.error("Failed to connect to MongoDB:", error);
+    // Reset the connection promise so we can retry on next invocation
+    global._mongoClient.promise = null;
     throw error;
   }
 }
@@ -61,24 +74,28 @@ async function getCollection<T extends Document = any>(collectionName: string): 
 
 /**
  * Close the MongoDB connection
+ * Note: In serverless environments, this is rarely needed
  */
 async function disconnect(): Promise<void> {
-  if (client) {
-    await client.close();
-    client = null;
-    dbInstance = null;
-    console.log('Disconnected from MongoDB');
+  if (global._mongoClient.client) {
+    await global._mongoClient.client.close();
+    global._mongoClient.client = null;
+    global._mongoClient.db = null;
+    global._mongoClient.promise = null;
+    console.log("Disconnected from MongoDB");
   }
 }
 
-// Handle process termination
-process.on('SIGINT', async () => {
-  await disconnect();
-  process.exit(0);
-});
+// Only register SIGINT handler in non-serverless environments
+if (process.env.NODE_ENV !== "production") {
+  process.on("SIGINT", async () => {
+    await disconnect();
+    process.exit(0);
+  });
+}
 
 export const dbService = {
   connect,
   getCollection,
-  disconnect
+  disconnect,
 };
